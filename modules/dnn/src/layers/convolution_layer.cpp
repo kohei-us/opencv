@@ -1204,8 +1204,21 @@ public:
     Mat weightsMat, biasesMat;
     UMat umat_weights;
     UMat umat_biases;
+    MatShape outputShape;
 
-    DeConvolutionLayerImpl(const LayerParams& params) : BaseConvolutionLayerImpl(params) {}
+    DeConvolutionLayerImpl(const LayerParams& params) : BaseConvolutionLayerImpl(params)
+    {
+        if (params.has("output_shape"))
+        {
+            const DictValue& vs = params.get("output_shape");
+            outputShape.reserve(vs.size());
+            for (int i = 0, n = vs.size(); i < n; ++i)
+            {
+                int v = vs.getIntValue(i);
+                outputShape.push_back(v);
+            }
+        }
+    }
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const CV_OVERRIDE
     {
@@ -1274,6 +1287,13 @@ public:
             CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
 
         int outCn = numOutput;
+
+        if (outputShape.size() == 4)
+        {
+            outCn = outputShape[1];
+            outH = outputShape[2];
+            outW = outputShape[3];
+        }
 
         CV_Assert(outCn % blobs[0].size[1] == 0);
         int ngroups = outCn / blobs[0].size[1];
